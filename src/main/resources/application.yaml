@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: rah-admin-server
+
+  security:
+    user:
+      name: ${USER_NAME} 
+      password: ${USER_PASSWORD}
+
+  boot:
+    admin:
+      #context-path: /monitoreo-bluprint
+      ui:
+        title: "RAH Admin Server"
