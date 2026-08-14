@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -38,12 +39,11 @@ public class AdminServerSecurityConfig {
 				// 2. Cualquier otra petición al Dashboard requiere autenticación
 				.anyExchange().authenticated())
 				// 3. Configura el formulario de Login nativo del Admin Server
+				.httpBasic(Customizer.withDefaults())
 				.formLogin(formLogin -> formLogin.loginPage(this.adminContextPath + "/login"))
 				// 4. Configura el Logout
 				.logout(logout -> logout.logoutUrl(this.adminContextPath + "/logout")
 						.logoutSuccessHandler(logoutSuccessHandler))
-				// 5. Deshabilitar por completo la protección CSRF
-//				.csrf(ServerHttpSecurity.CsrfSpec::disable)
 				/*
 				 * 5. Deshabilitar CSRF solo para los endpoints donde los microservicios se
 				 * registran e interactúan
