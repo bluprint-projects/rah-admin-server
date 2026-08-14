@@ -69,7 +69,7 @@ public class AdminServerSecurityConfig {
 			String path = exchange.getRequest().getPath().value();
 			HttpMethod method = exchange.getRequest().getMethod();
 
-			List<String> urlsAllowed = List.of("/instances", "/logout", "/actuator/", "/login").stream()
+			List<String> urlsAllowed = List.of("/login", "/logout", "/instances", "/actuator/").stream()
 					.map(this.adminContextPath::concat).toList();
 
 			boolean isExcluded = switch (method.name()) {
