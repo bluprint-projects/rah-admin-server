@@ -13,52 +13,65 @@ Stack moderno: Java 21 + Spring Boot 4 + WebFlux. Esto permite escribir aplicaci
 Uso de WebFlux + Actuator + Spring Boot Admin sugiere que el proyecto está pensado para ser no‑bloqueante y observable.
 Estructura de proyecto estándar Maven (mvn wrapper incluido) — facilita ejecución/CI.
 Existe una clase de configuración de seguridad (AdminServerSecurityConfig), lo que indica que se ha pensado en asegurar el acceso al panel/actuadores.
-Lo malo / áreas claras de mejora
 
-## Documentación insuficiente
+## Lo malo / áreas claras de mejora
 
-Falta README, instrucciones de arranque, variables de entorno y ejemplos de uso. Riesgo: otra persona no puede poner el servicio en marcha rápido.
-Falta Dockerfile / compose para despliegue reproducible.
-Visibilidad del código y pruebas
+### 1. Documentación insuficiente
 
-No vi tests en el árbol (o no están ubicados/nombrados). Necesarias pruebas unitarias e integradas (especialmente para código reactivo).
-Falta configuración de CI (GitHub Actions) para builds, tests y análisis estático.
-Prácticas reactivas / bloqueo accidental
+* Falta README, instrucciones de arranque, variables de entorno y ejemplos de uso. Riesgo: otra persona no puede poner el servicio en marcha rápido.
 
-Al usar WebFlux, hay riesgo común de introducir llamadas bloqueantes (JDBC, reclamos a librerías sin drivers reactivos). Hay que auditar el código y asegurar que I/O es reactivo o se delega explícitamente a un Scheduler.
-Seguridad: ajustes a revisar
+* Falta Dockerfile / compose para despliegue reproducible.
 
-Hay un archivo de configuración de seguridad; conviene revisar que:
-Actuator endpoints estén protegidos según roles.
-No haya credenciales en texto plano o in‑memory para producción.
-CSRF/CORS y cabeceras de seguridad estén correctamente configuradas si hay UI.
-Preferir JWT/OAuth2/OIDC para integración con SSO si es necesario.
-Calidad del código y limpieza
+### 2. Visibilidad del código y pruebas
 
-No pude revisar implementaciones concretas, pero recomiendo seguir principios SOLID, nomenclatura clara, separación de responsabilidades y límites de tamaño de método/clase.
-Falta ver si se usan DTOs/records (Java 21 permite records) para inmutabilidad.
-Recomendaciones concretas (priorizadas)
+* No vi tests en el árbol (o no están ubicados/nombrados). Necesarias pruebas unitarias e integradas (especialmente para código reactivo).
 
-## Documentación mínima (alta prioridad)
+* Falta configuración de CI (GitHub Actions) para builds, tests y análisis estático.
+
+### 3. Prácticas reactivas / bloqueo accidental
+
+* Al usar WebFlux, hay riesgo común de introducir llamadas bloqueantes (JDBC, reclamos a librerías sin drivers reactivos). Hay que auditar el código y asegurar que I/O es reactivo o se delega explícitamente a un Scheduler.
+
+### 4. Seguridad: ajustes a revisar
+
+* Hay un archivo de configuración de seguridad; conviene revisar que:
+  * Actuator endpoints estén protegidos según roles.
+  * No haya credenciales en texto plano o in‑memory para producción.
+  * CSRF/CORS y cabeceras de seguridad estén correctamente configuradas si hay UI.
+  * Preferir JWT/OAuth2/OIDC para integración con SSO si es necesario.
+
+### 5. Calidad del código y limpieza
+
+* No pude revisar implementaciones concretas, pero recomiendo seguir principios SOLID, nomenclatura clara, separación de responsabilidades y límites de tamaño de método/clase.
+
+* Falta ver si se usan DTOs/records (Java 21 permite records) para inmutabilidad.
+
+## Recomendaciones concretas (priorizadas)
+
+### 1. Documentación mínima (alta prioridad)
 
 * Añadir README con:
-Comandos para run/build/test: mvnw clean package; mvnw spring-boot:run
-Variables de entorno (application.yml / application.properties ejemplos).
-Endpoints principales y puertos.
-Añadir CONTRIBUTING y un ejemplo de deployment (Dockerfile + docker-compose).
-Tests & CI (alta prioridad)
+  * Comandos para run/build/test: mvnw clean package; mvnw spring-boot:run
+  * Variables de entorno (application.yml / application.properties ejemplos).
+  * Endpoints principales y puertos.
+
+* Añadir CONTRIBUTING y un ejemplo de deployment (Dockerfile + docker-compose).
+
+### 2. Tests & CI (alta prioridad)
 
 * Añadir tests unitarios para servicios con StepVerifier (reactor-test) y WebTestClient para endpoints WebFlux.
-Configurar GitHub Actions con pasos: mvn -B -DskipTests=false test, maven‑checkstyle/spotbugs, build.
-Añadir cobertura mínima y gating en la pipeline.
-Seguridad (alta)
+* Configurar GitHub Actions con pasos: mvn -B -DskipTests=false test, maven‑checkstyle/spotbugs, build.
+* Añadir cobertura mínima y gating en la pipeline.
+
+### 3. Seguridad (alta)
 
 * Revisar AdminServerSecurityConfig:
-Asegurar uso de PasswordEncoder si hay usuarios locales.
-Restringir actuator endpoints (management.endpoints.web.exposure) y asegurar /actuator/, /admin/ con roles.
-Evitar exponer información sensible en health/info en producción.
-Integrar OAuth2/OIDC/JWT para producción si procede.
-Revisión reactiva y programación funcional (alta → técnica)
+  * Asegurar uso de PasswordEncoder si hay usuarios locales.
+  * Restringir actuator endpoints (management.endpoints.web.exposure) y asegurar /actuator/, /admin/ con roles.
+  * Evitar exponer información sensible en health/info en producción.
+  * Integrar OAuth2/OIDC/JWT para producción si procede.
+
+### 4. Revisión reactiva y programación funcional (alta → técnica)
 
 * Evitar bloqueos: revisar que no haya llamadas a métodos bloqueantes dentro de pipelines Reactor (no call to .block(), no usar repositorios JDBC sin adaptar).
 Preferir tipos inmutables:
