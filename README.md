@@ -7,113 +7,105 @@ Este repo es el servidor de administración/monitorización para el ecosistema R
 - Framework / runtime: Spring Boot 4.x (WebFlux)
 - Notable libraries (en uso): Spring Boot WebFlux, Spring Boot Actuator, Spring Security, Spring Boot Admin
 
-## Lo bueno
+Resumen rápido: Es una aplicación Java 21 basada en Spring Boot (parent 4.1.0) con WebFlux, Actuator, Security y Spring Boot Admin — un servidor de administración/monitorización reactivo. Vi el pom.xml, la entrada de aplicación (RahAdminServerApplication.java) y un AdminServerSecurityConfig en src/main/java/com/rah/adminserver/config; no hay README ni documentación visible en la raíz.
 
-Stack moderno: Java 21 + Spring Boot 4 + WebFlux. Esto permite escribir aplicaciones reactivas y aprovechar features recientes del JDK.
-Uso de WebFlux + Actuator + Spring Boot Admin sugiere que el proyecto está pensado para ser no‑bloqueante y observable.
-Estructura de proyecto estándar Maven (mvn wrapper incluido) — facilita ejecución/CI.
-Existe una clase de configuración de seguridad (AdminServerSecurityConfig), lo que indica que se ha pensado en asegurar el acceso al panel/actuadores.
+## Lo bueno
+- Stack moderno: Java 21 + Spring Boot 4 + WebFlux. Esto permite escribir aplicaciones reactivas y aprovechar features recientes del JDK.
+- Uso de WebFlux + Actuator + Spring Boot Admin sugiere que el proyecto está pensado para ser no‑bloqueante y observable.
+- Estructura de proyecto estándar Maven (mvn wrapper incluido) — facilita ejecución/CI.
+- Existe una clase de configuración de seguridad (AdminServerSecurityConfig), lo que indica que se ha pensado en asegurar el acceso al panel/actuadores.
 
 ## Lo malo / áreas claras de mejora
 
-### 1. Documentación insuficiente
+1. Documentación insuficiente
+   - Falta README, instrucciones de arranque, variables de entorno y ejemplos de uso. Riesgo: otra persona no puede poner el servicio en marcha rápido.
+   - Falta Dockerfile / compose para despliegue reproducible.
 
-* Falta README, instrucciones de arranque, variables de entorno y ejemplos de uso. Riesgo: otra persona no puede poner el servicio en marcha rápido.
+2. Visibilidad del código y pruebas
+   - No vi tests en el árbol (o no están ubicados/nombrados). Necesarias pruebas unitarias e integradas (especialmente para código reactivo).
+   - Falta configuración de CI (GitHub Actions) para builds, tests y análisis estático.
 
-* Falta Dockerfile / compose para despliegue reproducible.
+3. Prácticas reactivas / bloqueo accidental
+   - Al usar WebFlux, hay riesgo común de introducir llamadas bloqueantes (JDBC, reclamos a librerías sin drivers reactivos). Hay que auditar el código y asegurar que I/O es reactivo o se delega explícitamente a un Scheduler.
 
-### 2. Visibilidad del código y pruebas
+4. Seguridad: ajustes a revisar
+   - Hay un archivo de configuración de seguridad; conviene revisar que:
+     - Actuator endpoints estén protegidos según roles.
+     - No haya credenciales en texto plano o in‑memory para producción.
+     - CSRF/CORS y cabeceras de seguridad estén correctamente configuradas si hay UI.
+     - Preferir JWT/OAuth2/OIDC para integración con SSO si es necesario.
 
-* No vi tests en el árbol (o no están ubicados/nombrados). Necesarias pruebas unitarias e integradas (especialmente para código reactivo).
-
-* Falta configuración de CI (GitHub Actions) para builds, tests y análisis estático.
-
-### 3. Prácticas reactivas / bloqueo accidental
-
-* Al usar WebFlux, hay riesgo común de introducir llamadas bloqueantes (JDBC, reclamos a librerías sin drivers reactivos). Hay que auditar el código y asegurar que I/O es reactivo o se delega explícitamente a un Scheduler.
-
-### 4. Seguridad: ajustes a revisar
-
-* Hay un archivo de configuración de seguridad; conviene revisar que:
-  * Actuator endpoints estén protegidos según roles.
-  * No haya credenciales en texto plano o in‑memory para producción.
-  * CSRF/CORS y cabeceras de seguridad estén correctamente configuradas si hay UI.
-  * Preferir JWT/OAuth2/OIDC para integración con SSO si es necesario.
-
-### 5. Calidad del código y limpieza
-
-* No pude revisar implementaciones concretas, pero recomiendo seguir principios SOLID, nomenclatura clara, separación de responsabilidades y límites de tamaño de método/clase.
-
-* Falta ver si se usan DTOs/records (Java 21 permite records) para inmutabilidad.
+5. Calidad del código y limpieza
+   - No pude revisar implementaciones concretas, pero recomiendo seguir principios SOLID, nomenclatura clara, separación de responsabilidades y límites de tamaño de método/clase.
+   - Falta ver si se usan DTOs/records (Java 21 permite records) para inmutabilidad.
 
 ## Recomendaciones concretas (priorizadas)
 
-### 1. Documentación mínima (alta prioridad)
+1) Documentación mínima (alta prioridad)
+   - Añadir README con:
+     - Comandos para run/build/test: mvnw clean package; mvnw spring-boot:run
+     - Variables de entorno (application.yml / application.properties ejemplos).
+     - Endpoints principales y puertos.
+   - Añadir CONTRIBUTING y un ejemplo de deployment (Dockerfile + docker-compose).
 
-* Añadir README con:
-  * Comandos para run/build/test: mvnw clean package; mvnw spring-boot:run
-  * Variables de entorno (application.yml / application.properties ejemplos).
-  * Endpoints principales y puertos.
+2) Tests & CI (alta prioridad)
+   - Añadir tests unitarios para servicios con StepVerifier (reactor-test) y WebTestClient para endpoints WebFlux.
+   - Configurar GitHub Actions con pasos: mvn -B -DskipTests=false test, maven‑checkstyle/spotbugs, build.
+   - Añadir cobertura mínima y gating en la pipeline.
 
-* Añadir CONTRIBUTING y un ejemplo de deployment (Dockerfile + docker-compose).
+3) Seguridad (alta)
+   - Revisar AdminServerSecurityConfig:
+     - Asegurar uso de PasswordEncoder si hay usuarios locales.
+     - Restringir actuator endpoints (management.endpoints.web.exposure) y asegurar /actuator/**, /admin/** con roles.
+     - Evitar exponer información sensible en health/info en producción.
+     - Integrar OAuth2/OIDC/JWT para producción si procede.
 
-### 2. Tests & CI (alta prioridad)
+4) Revisión reactiva y programación funcional (alta → técnica)
+   - Evitar bloqueos: revisar que no haya llamadas a métodos bloqueantes dentro de pipelines Reactor (no call to .block(), no usar repositorios JDBC sin adaptar).
+   - Preferir tipos inmutables:
+     - Usar record para DTOs cuando corresponda.
+   - Encapsular efectos: mantener funciones puras donde sea posible y empujar efectos (I/O, logging) a los bordes.
+   - Aprovechar operadores Reactor y composition:
+     - map/flatMap/filter/transform/retryWhen/onErrorResume en vez de flujo imperativo.
+     - Evitar long if/else en pipelines: componer pequeñas funciones puras.
+   - Propagación de context y tracing:
+     - Usar Reactor Context para información por petición (correlation id), y compatibilidad con MDC para logs reactivos.
+   - Considerar RouterFunctions (en WebFlux) para un estilo más funcional de rutas/handlers si se quiere un enfoque FP más evidente.
 
-* Añadir tests unitarios para servicios con StepVerifier (reactor-test) y WebTestClient para endpoints WebFlux.
-* Configurar GitHub Actions con pasos: mvn -B -DskipTests=false test, maven‑checkstyle/spotbugs, build.
-* Añadir cobertura mínima y gating en la pipeline.
+5) Arquitectura y limpieza del código
+   - Paquetes sugeridos: controller (handlers), router (si usa functional routing), service, repository, model/dto, config, util.
+   - Mantener responsabilidades: controllers/handlers solo validación/transformación y delegar lógica al service.
+   - Validación: usar validaciones reactivas (@Validated) y composición de errores claros (errores tipados, HTTP status adecuados).
+   - Centralizar manejo de errores: handler global para mapear excepciones a responses (WebExceptionHandler / @RestControllerAdvice).
 
-### 3. Seguridad (alta)
+6) Herramientas de calidad
+   - Añadir: SpotBugs/FindBugs, PMD, Checkstyle o google-java-format.
+   - Formateo automático y pre-commit hook (git hooks).
+   - Dependabot/renovate para mantener dependencias actualizadas (especialmente Spring Boot y librerías de seguridad).
 
-* Revisar AdminServerSecurityConfig:
-  * Asegurar uso de PasswordEncoder si hay usuarios locales.
-  * Restringir actuator endpoints (management.endpoints.web.exposure) y asegurar /actuator/, /admin/ con roles.
-  * Evitar exponer información sensible en health/info en producción.
-  * Integrar OAuth2/OIDC/JWT para producción si procede.
+7) Dependencias / pom
+   - Confirmar que versiones de spring-boot-admin y parent están alineadas. Añadir maven-surefire/failsafe con configuraciones claras.
+   - Usar dependencyManagement/BOM si integra varias dependencias.
 
-### 4. Revisión reactiva y programación funcional (alta → técnica)
-
-* Evitar bloqueos: revisar que no haya llamadas a métodos bloqueantes dentro de pipelines Reactor (no call to .block(), no usar repositorios JDBC sin adaptar).
-Preferir tipos inmutables:
-Usar record para DTOs cuando corresponda.
-Encapsular efectos: mantener funciones puras donde sea posible y empujar efectos (I/O, logging) a los bordes.
-
-* Aprovechar operadores Reactor y composition:
-map/flatMap/filter/transform/retryWhen/onErrorResume en vez de flujo imperativo.
-Evitar long if/else en pipelines: componer pequeñas funciones puras.
-
-* Propagación de context y tracing:
-Usar Reactor Context para información por petición (correlation id), y compatibilidad con MDC para logs reactivos.
-Considerar RouterFunctions (en WebFlux) para un estilo más funcional de rutas/handlers si se quiere un enfoque FP más evidente.
-Arquitectura y limpieza del código
-
-* Paquetes sugeridos: controller (handlers), router (si usa functional routing), service, repository, model/dto, config, util.
-Mantener responsabilidades: controllers/handlers solo validación/transformación y delegar lógica al service.
-Validación: usar validaciones reactivas (@Validated) y composición de errores claros (errores tipados, HTTP status adecuados).
-Centralizar manejo de errores: handler global para mapear excepciones a responses (WebExceptionHandler / @RestControllerAdvice).
-Herramientas de calidad
-
-* Añadir: SpotBugs/FindBugs, PMD, Checkstyle o google-java-format.
-Formateo automático y pre-commit hook (git hooks).
-Dependabot/renovate para mantener dependencias actualizadas (especialmente Spring Boot y librerías de seguridad).
-Dependencias / pom
-
-* Confirmar que versiones de spring-boot-admin y parent están alineadas. Añadir maven-surefire/failsafe con configuraciones claras.
-Usar dependencyManagement/BOM si integra varias dependencias.
 Ejemplos de patrones funcionales y Reactor (conceptual)
+- Evitar:
+  - Llamadas bloqueantes dentro de flatMap: flatMap(x -> blockingCall()); // malo
+- Preferir:
+  - flatMap(x -> Mono.fromCallable(() -> blockingCall()).subscribeOn(Schedulers.boundedElastic()))
+  - Componer funciones puras: service.findUser(id).map(this::toDto).flatMap(repo::save)
 
-* Evitar:
-Llamadas bloqueantes dentro de flatMap: flatMap(x -> blockingCall()); // malo
-
-* Preferir:
-flatMap(x -> Mono.fromCallable(() -> blockingCall()).subscribeOn(Schedulers.boundedElastic()))
-Componer funciones puras: service.findUser(id).map(this::toDto).flatMap(repo::save)
 Pruebas reactivas básicas
+- Servicios: usar reactor-test StepVerifier:
+  - StepVerifier.create(service.doSomething(...)).expectNextMatches(...).verifyComplete();
+- Endpoints: usar WebTestClient.
 
-* Servicios: usar reactor-test StepVerifier:
-StepVerifier.create(service.doSomething(...)).expectNextMatches(...).verifyComplete();
-Endpoints: usar WebTestClient.
-
+## Checklist rápido para la próxima PR
+- [ ] Añadir README con ejemplos de run y variables env.
+- [ ] Añadir pruebas unitarias + WebTestClient.
+- [ ] Añadir pipeline CI (build + tests + static analysis).
+- [ ] Auditar código para llamadas bloqueantes y corregir.
+- [ ] Revisar AdminServerSecurityConfig para asegurar endpoints y evitar credenciales inseguras.
+- [ ] Incluir herramientas de calidad (SpotBugs/Checkstyle) y formateo.
 
 ## Qué hay en este repo (alto nivel)
 - pom.xml — configuración Maven y dependencias.
