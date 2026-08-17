@@ -24,7 +24,8 @@ public class AdminServerSecurityConfig {
 	private final String adminContextPath;
 
 	public AdminServerSecurityConfig(AdminServerProperties adminServerProperties) {
-		this.adminContextPath = Optional.ofNullable(adminServerProperties.getContextPath()).orElse("");
+		this.adminContextPath = Optional.ofNullable(adminServerProperties.getContextPath())
+				.filter(path -> !path.isBlank()).orElse("");
 	}
 
 	@Bean
@@ -39,7 +40,6 @@ public class AdminServerSecurityConfig {
 				// 2. Cualquier otra petición al Dashboard requiere autenticación
 				.anyExchange().authenticated())
 				// 3. Configura el formulario de Login nativo del Admin Server
-				.httpBasic(Customizer.withDefaults())
 				.formLogin(formLogin -> formLogin.loginPage(this.adminContextPath + "/login"))
 				// 4. Configura el Logout
 				.logout(logout -> logout.logoutUrl(this.adminContextPath + "/logout")
@@ -54,12 +54,14 @@ public class AdminServerSecurityConfig {
 				.csrf(csrf -> csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
 						// Le pasamos el matcher que "no requiere" CSRF para las rutas excluidas.
 						.requireCsrfProtectionMatcher(this.csrfExclusionsMatcher()))
-				.build();
+				// 6. Se activa la autenticación basica para los servicios
+				.httpBasic(Customizer.withDefaults()).build();
 	}
 
 	/**
-	 * Matcher que devuelve NOT_MATCH (es decir: no proteger con CSRF) para las
-	 * rutas que quieres excluir.
+	 * Devuelve NOT_MATCH (sin protección CSRF) para rutas excluidas.
+	 * 
+	 * Esto permite que microservicios se registren sin token CSRF.
 	 * 
 	 * @return
 	 */
@@ -73,7 +75,8 @@ public class AdminServerSecurityConfig {
 					.map(this.adminContextPath::concat).toList();
 
 			boolean isExcluded = switch (method.name()) {
-			case "POST" -> urlsAllowed.stream().anyMatch(path::equals);
+			case "GET" -> Boolean.TRUE;
+			case "POST" -> urlsAllowed.stream().anyMatch(path::startsWith);
 			case "DELETE" -> path.matches(this.adminContextPath + "/instances/[^/]+");
 			default -> urlsAllowed.stream().anyMatch(path::startsWith);
 			};
@@ -84,7 +87,7 @@ public class AdminServerSecurityConfig {
 				return ServerWebExchangeMatcher.MatchResult.notMatch();
 			}
 
-			return ServerWebExchangeMatcher.MatchResult.notMatch();
+			return ServerWebExchangeMatcher.MatchResult.match();
 		};
 
 	}
