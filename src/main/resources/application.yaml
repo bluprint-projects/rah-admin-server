@@ -1,3 +1,6 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: rah-admin-server
@@ -9,6 +12,6 @@ spring:
 
   boot:
     admin:
-      #context-path: /monitoreo-bluprint
+      #context-path: /monitoreo-bluprint # cambiar la url inicial
       ui:
         title: "RAH Admin Server"
