@@ -1,0 +1,18 @@
+spring:
+
+  # FASE DE ARRANQUE: Spring Boot pausa el inicio para descargar los secretos primero
+  config:
+    import: "vault://" # Importa de forma nativa desde la raíz secreta de Vault
+
+  cloud:
+    vault:
+      uri: http://localhost:8200 # URL estándar de Vault en desarrollo local
+      enabled: true
+      kv:
+        enabled: true
+        backend: secret # Nombre del motor de llaves/valores (Key-Value v2)
+        application-name: ${spring.application.name} # Ruta exacta dentro de Vault
+
+      # AUTENTICACIÓN LOCAL: Usamos un Token de desarrollo en lugar de Kubernetes
+      authentication: TOKEN
+      token: ${VAULT_TOKEN} # El token maestro que definiremos al levantar Vault
